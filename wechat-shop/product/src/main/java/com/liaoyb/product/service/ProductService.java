@@ -1,8 +1,10 @@
 package com.liaoyb.product.service;
 
+import com.liaoyb.product.dto.CartDTO;
 import com.liaoyb.product.model.ProductCategory;
 import com.liaoyb.product.model.ProductInfo;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
@@ -15,5 +17,5 @@ public interface ProductService {
 
     List<ProductInfo> getProducts(List<String> productIdList);
 
-    int deductStock(String productId, Long productQuantity);
+    void decreasesStock(@Valid List<CartDTO> cartDTOList);
 }

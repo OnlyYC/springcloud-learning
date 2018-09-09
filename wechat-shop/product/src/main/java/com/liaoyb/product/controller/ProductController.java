@@ -1,6 +1,7 @@
 package com.liaoyb.product.controller;
 
 import com.liaoyb.product.common.Result;
+import com.liaoyb.product.dto.CartDTO;
 import com.liaoyb.product.form.DeductStockForm;
 import com.liaoyb.product.model.ProductCategory;
 import com.liaoyb.product.model.ProductInfo;
@@ -42,7 +43,6 @@ public class ProductController {
         //获取所有商品
         List<ProductInfo> productInfos = productService.getProductList();
 
-
         //获取商品类别
         List<ProductCategory> productCategories = productService.getProductCategoryList();
 
@@ -83,23 +83,23 @@ public class ProductController {
      * @return
      */
     @PostMapping("/product/findByIdList")
-    public Result<List<ProductInfo>> getProducts(String[] productIdList) {
+    public Result<List<ProductInfo>> getProducts(@RequestBody List<String> productIdList) {
         Assert.notEmpty(productIdList, "商品编号不能为空");
-        return Result.success(productService.getProducts(Arrays.asList(productIdList)));
+        return Result.success(productService.getProducts(productIdList));
     }
 
     /**
      * 扣库存
      *
-     * @param deductStockForm
+     * @param cartDTOList
      * @return
      */
-    @PutMapping("/product/deductStock")
-    public Result deductStock(@Valid @RequestBody DeductStockForm deductStockForm) {
-        int affectCont = productService.deductStock(deductStockForm.getProductId(), deductStockForm.getProductQuantity());
-        if (affectCont > 0) {
+    @PutMapping("/product/decreasesStock")
+    public Result decreasesStock(@Valid @RequestBody List<CartDTO> cartDTOList) {
+        try {
+            productService.decreasesStock(cartDTOList);
             return Result.success(null);
-        } else {
+        }catch (Exception e){
             return Result.fail(-1, "库存不足");
         }
     }

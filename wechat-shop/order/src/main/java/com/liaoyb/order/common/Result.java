@@ -21,8 +21,8 @@ public class Result<T> {
     }
 
 
-    public static Result<?> fail(Integer code, String msg) {
-        Result<?> result = new Result<>();
+    public static Result fail(Integer code, String msg) {
+        Result result = new Result();
         result.setCode(code);
         result.setMsg(msg);
         return result;

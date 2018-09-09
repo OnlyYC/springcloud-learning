@@ -1,18 +1,18 @@
 package com.liaoyb.order.controller;
 
 import com.liaoyb.order.apiservice.ProductService;
-import com.liaoyb.order.common.DeductStockDTO;
 import com.liaoyb.order.common.ProductInfoDTO;
 import com.liaoyb.order.common.Result;
 import com.liaoyb.order.common.utils.IdGenerator;
+import com.liaoyb.order.dto.CartDTO;
 import com.liaoyb.order.dto.OrderResultDTO;
 import com.liaoyb.order.form.OrderForm;
 import com.liaoyb.order.model.OrderDetail;
 import com.liaoyb.order.model.OrderMaster;
 import com.liaoyb.order.service.OrderService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +31,7 @@ import java.util.stream.Collectors;
  *
  * @author liaoyb
  */
+@Slf4j
 @RestController
 public class OrderController {
 
@@ -46,9 +46,7 @@ public class OrderController {
     public Result<OrderResultDTO> createOrder(@Valid @RequestBody OrderForm orderForm) {
         List<String> productIdList = orderForm.getItems().stream().map(OrderForm.OrderProductItem::getProductId).collect(Collectors.toList());
         //通过订单的表单查询商品信息
-        String[] productIds = new String[productIdList.size()];
-        productIds = productIdList.toArray(productIds);
-        Result<List<ProductInfoDTO>> productsResult = productService.getProducts(productIds);
+        Result<List<ProductInfoDTO>> productsResult = productService.getProducts(productIdList);
 
         Map<String, List<ProductInfoDTO>> productsByIdMap = productsResult.getData().stream().collect(Collectors.groupingBy(ProductInfoDTO::getProductId));
 
@@ -66,6 +64,7 @@ public class OrderController {
 
         //
         List<OrderDetail> orderDetails = new ArrayList<>();
+        List<CartDTO> cartDTOList = new ArrayList<>();
         for (OrderForm.OrderProductItem orderProductItem : orderForm.getItems()) {
             List<ProductInfoDTO> productInfoDTOs = productsByIdMap.get(orderProductItem.getProductId());
             Assert.notEmpty(productInfoDTOs, "商品:" + orderProductItem.getProductId() + "不存在");
@@ -82,16 +81,9 @@ public class OrderController {
             orderDetail.setProductIcon(productInfoDTO.getProductIcon());
             orderDetail.setCreateTime(new Date());
             orderDetail.setUpdateTime(new Date());
-            //扣库存
-            DeductStockDTO deductStockDTO = new DeductStockDTO();
-            deductStockDTO.setProductId(orderDetail.getProductId());
-            deductStockDTO.setProductQuantity(orderDetail.getProductQuantity());
-            Result result = productService.deductStock(deductStockDTO);
+            cartDTOList.add(new CartDTO(orderDetail.getProductId(), orderDetail.getProductQuantity()));
 
-            if(!result.isSuccess()){
-                //库存扣取失败
-                throw new RuntimeException("商品:"+orderDetail.getProductId()+"扣取库存失败,原因:"+result.getMsg());
-            }
+
             orderDetails.add(orderDetail);
 
 
@@ -99,7 +91,12 @@ public class OrderController {
                     orderDetail.getProductPrice().multiply(new BigDecimal(orderDetail.getProductQuantity()))
             );
         }
-        //todo 其中一个商品库存扣取失败，事物如何补偿
+        Result decreasesStockResult = productService.decreasesStock(cartDTOList);
+        if (!decreasesStockResult.isSuccess()) {
+            //库存扣取失败
+            log.error("扣取库存失败,原因" + decreasesStockResult.getMsg());
+            return Result.fail(-1, "扣取库存失败");
+        }
 
         orderMaster.setOrderAmount(totalAmount);
         //保存订单商品

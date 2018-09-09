@@ -1,18 +1,22 @@
-package com.liaoyb.order.common;
+package com.liaoyb.product.dto;
 
 import lombok.Data;
+
+import javax.validation.constraints.NotNull;
 
 /**
  * @author liaoyb
  */
 @Data
-public class DeductStockDTO {
+public class CartDTO {
     /**
      * 商品id
      */
+    @NotNull
     private String productId;
     /**
      * 数量
      */
+    @NotNull
     private Long productQuantity;
 }
