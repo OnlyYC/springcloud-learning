@@ -9,12 +9,19 @@ spring:
           username: 2532105
           password: 52601733
 #          basedir: E:/config #本地仓库保存路径
+  rabbitmq:
+    host: 192.168.33.12
+    port: 5672
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
 server:
   port: 8700
-logging:
-  level:
-    root: debug
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
